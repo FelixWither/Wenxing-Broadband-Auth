@@ -4,11 +4,11 @@
 
 # 1. 作用
 
-科服在2024年下学期给宿舍区宽带加上了**账号密码验证**和设备数量限制。这个程序就是为了自动化登录流程而写的。全部基于C语言实现，**适合在资源有限的软路由上自动运行**。
+科服在2024年下学期给宿舍区宽带加上了**账号密码验证**和设备数量限制。这个程序就是为了**自动化登录流程**而写的。全部基于C语言实现，**适合在资源有限的软路由上自动运行**。
 
 # 2. 用法
 
-##### 如果你的宽带还没破解设备数量限制（3台），以下过程只能用于登录你当前操作的设备！
+##### `注意：`如果你的宽带还没破解设备数量限制（3台），以下过程只能用于登录你当前操作的设备！
 
 ## 2.1 基础
 
@@ -18,21 +18,21 @@
 
 2. 等待网页自动跳转到运营商选择页面之后，记录下当前网页的网址。应当看起来像是`https://broadband.215123.cn/sso/broadband.html?client=xxxxxxxxx&redirect=http://10.10.16.101:8080/eportal/login_sso.jsp%3Fwlanuserip=xxxxxxxxx&wlanacname=xxxxxxxxx&ssid=&nasip=xxxxxxxxx&snmpagentip=&mac=xxxxxxxxx=wireless-v2&url=xxxxxxxxx&apmac=&nasid=xxxxxxxxx&vid=xxxxxxxxx&port=xxxxxxxxx&nasportid=xxxxxxxxx` 这样
 
-3. 将`redirect=`这里 **等于号**之后的东西全部复制下来
+3. 将`redirect=`这里 **等于号之后**的东西全部复制下来
 
 4. 用**记事本**打开`config.yaml`，在`oauth_url:`这一行的**冒号之后**将你复制的内容粘贴上去
 
 5. 在`phone:`和`uid:`着两行分别填上你**登录**宽带**所需**的**手机号**和**身份识别码（身份证号后8位）**
 
-6. 保存，双击auth.exe测试登录，显示Success即为成功
+6. **保存**，双击`auth.exe`测试登录，显示`Success`即为成功
 
-7. **以后**登录直接双击auth.exe
+7. **以后**登录直接双击`auth.exe`
 
 #### 2.1.2 登出（下线）
 
-1. 打开命令行（cmd），将这个程序拖进命令行窗口里
+1. 打开`命令行（cmd）`，将这个程序拖进命令行窗口里
 
-2. 输入一个空格，随后输入logout，回车
+2. 输入一个`空格`，随后输入`logout`，回车
 
 ## 2.2 命令行操作
 
