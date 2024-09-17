@@ -1,7 +1,5 @@
 #include "helpers.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <limits.h>
 #include <unistd.h>
 #include <libgen.h>
@@ -12,6 +10,7 @@
 #define BASE_URL "https://api.215123.cn/ac"
 #define LOGIN_PATH "/auth/loginByPhoneAndUid"
 #define GET_QRCODE "/auth/qrCodeLogin"
+#define LOGIN_DETECT "/auth/isLogined"
 #define REDIRECT_PATH "/auth/oauthRedirect"
 #define CONFIG_FILE "config.yaml"
 #define BASE_POSTLOGIN_URL "http://10.10.16.101:8080/eportal/InterFace.do"
@@ -100,6 +99,57 @@ static char *get_uuid() {
     return uuid;
 }
 
+static int is_logged(const char *uuid){
+    printf("%sChecking if it is logged%s\n", CBLUE, CRESET);
+    CURL *curl;
+    CURLcode res;
+    struct memory chunk = {0};
+    int logged = 1;
+
+    curl = curl_easy_init();
+
+    if(curl){
+        char url[512];
+        char payload[512];
+        snprintf(url, sizeof(url), "%s%s", BASE_URL, LOGIN_DETECT);
+        snprintf(payload, sizeof(payload), "{\"clientId\":\"%s\",\"type\":\"pc\",\"uuid\":\"%s\"}", CLIENT_ID, uuid);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, set_common_headers());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+        res = curl_easy_perform(curl);
+
+        if(res == CURLE_OK) {
+            cJSON *json = cJSON_Parse(chunk.response);
+            if (json != NULL) {
+                cJSON *data = cJSON_GetObjectItemCaseSensitive(json, "message");
+                char *result;
+                if (cJSON_IsString(data) && (data->valuestring != NULL)) {
+                    result = strdup(data->valuestring);
+                    logged = strcmp(result, "未确认登录")? 1: 0;
+                    printf("%sLogin status%s: %s\n", CBLUE, CRESET, logged? "No": "Yes");
+                } else {
+                    print_json_err("No result provided by server.", chunk.response);
+                    return 1;
+                }
+                cJSON_Delete(json);
+            } else {
+                print_json_err("No valid JSON response for oauth request.", chunk.response);
+            }
+        } else {
+            fprintf(stderr, "%sGet login status failed%s: %s\n", CRED, CRESET, curl_easy_strerror(res));
+        }
+        curl_easy_cleanup(curl);
+    }
+    if (chunk.response) {
+        free(chunk.response);
+    }
+    return logged;
+}
+
 static char *login(const char *uuid) {
     printf("%sObtaining token.%s\n", CBLUE, CRESET);
     CURL *curl;
@@ -156,7 +206,7 @@ static char *login(const char *uuid) {
     return token;
 }
 
-static char *oauth(const char *token, const char *client_id, const char *redirect_start_uri, const char *isp_name) {
+static char *oauth(const char *token, const char *redirect_start_uri, const char *isp_name) {
     printf("%sObtaining login key (code).%s\n", CBLUE, CRESET);
     CURL *curl;
     CURLcode res;
@@ -168,7 +218,7 @@ static char *oauth(const char *token, const char *client_id, const char *redirec
     if(curl) {
         char url[1024];
         snprintf(url, sizeof(url), "%s%s?response_type=code&client_id=%s&redirect_uri=%s&serviceName=%s",
-                 BASE_URL, REDIRECT_PATH, client_id, redirect_start_uri, isp_name);
+                 BASE_URL, REDIRECT_PATH, CLIENT_ID, redirect_start_uri, isp_name);
 
         struct curl_slist *headers = NULL;
         headers = set_common_headers();
@@ -262,6 +312,7 @@ static void final_step(const char *login_key, const char *isp_name, const char *
                             char *end = strchr(user_index, '&');
                             if (end) *end = '\0';
                             printf("%sUser index obtained%s: %s\n", CBLUE, CRESET, user_index);
+                            printf("%sSuccess%s", CBLUE, CRESET);
                             append_yaml_if_missing(file_name, "user_index", user_index);
                         } else {
                             print_json_err("No user index provided by server.", chunk.response);
@@ -394,8 +445,8 @@ int main(int argc, char *argv[]) {
     if (isp[0] == '\0') { printf("No ISP specified."); return 1; }
     oauth_url = parse_yaml(config_path, "oauth_url");
     if (oauth_url[0] == '\0') { printf("No oauth url found."); return 1; }
-    user_index = parse_yaml(config_path, "user_index");
-    if (user_index[0] == '\0') { printf("No user index found."); return 1; }
+    // user_index = parse_yaml(config_path, "user_index");
+    // if (user_index[0] == '\0') { printf("No user index found."); return 1; }
 
     char *uuid = get_uuid();
     if (uuid == NULL) {
@@ -404,6 +455,10 @@ int main(int argc, char *argv[]) {
         curl_global_cleanup();
         return 1;
     }
+    append_yaml_if_missing(config_path, "uuid", uuid);
+
+    int logged = is_logged(uuid);
+    if (!logged) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
 
     char *token = login(uuid);
     if (token == NULL) {
@@ -414,7 +469,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char *code = oauth(token, CLIENT_ID, oauth_url, isp);
+    char *code = oauth(token, oauth_url, isp);
     if (code == NULL) {
         printf("Failed to get login code, check details above.");
         free(uuid);

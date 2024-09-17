@@ -1,5 +1,4 @@
 #include "helpers.h"
-#include <limits.h>
 #include <unistd.h>
 #include <libgen.h>
 #include <yaml.h>
@@ -29,7 +28,7 @@ size_t header_search(void *data, size_t size, size_t nmemb, void *userp) {
     // NOTE: This fuction will be excuted for many times, round and around
     // to check if the desired content appears.
     if (strstr(header_line, key_to_find) != NULL) {
-        printf("%sSuccess%s\n", CBLUE, CRESET);
+        printf("%sLogin success%s\n", CBLUE, CRESET);
     }
 
     free(header_line);
@@ -64,7 +63,8 @@ char *get_executable_dir() {
     #endif
 }
 
-char *parse_yaml(const char *filename, char *key_to_find) {
+char *parse_yaml(const char *filename, const char *key_to_find) {
+    int found = 0;
     FILE *file = fopen(filename, "r");
     if (!file) {
         perror("Error opening file");
@@ -104,6 +104,7 @@ char *parse_yaml(const char *filename, char *key_to_find) {
                         // strncpy(phone, (char *)event.data.scalar.value, 20 - 1);
                         yaml_parser_delete(&parser);
                         fclose(file);
+                        found ++;
                         return (char *)event.data.scalar.value;
                     }
                     // } else if (strcmp(key, "uid") == 0) {
@@ -124,14 +125,13 @@ char *parse_yaml(const char *filename, char *key_to_find) {
                 // End of the stream
                 yaml_parser_delete(&parser);
                 fclose(file);
-                // return 0;
+                if (!found) return (char *)"\0";
                 break;
 
             default:
                 // Ignore other events
                 break;
         }
-
         yaml_event_delete(&event);
     }
 }
@@ -171,6 +171,7 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
     char *phone;
     char *uid;
     char *isp;
+    char *uuid;
     char *oauth_url;
     char *user_index;
 
@@ -178,6 +179,7 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
     phone = parse_yaml(filename, "phone");
     uid = parse_yaml(filename, "uid");
     isp = parse_yaml(filename, "isp");
+    uuid = parse_yaml(filename, "uuid");
     oauth_url = parse_yaml(filename, "oauth_url");
     user_index = parse_yaml(filename, "user_index");
 
@@ -185,6 +187,15 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
     if (!file) {
         perror("Error opening file for appending");
         return 1;
+    }
+
+    if (strcmp(key, "uuid") == 0 && uuid[0] == '\0'){
+        // Reformat file 
+        reformat(file, phone, uid, isp);
+        fprintf(file, "%s: %s\n", key, value);
+        fprintf(file, "oauth_url: %s\n", oauth_url);
+        fprintf(file, "user_index: %s\n", user_index);
+        printf("Key '%s' appended to YAML file.\n", key);
     }
 
     // Check if the key exists
@@ -195,11 +206,10 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
     if (strcmp(key, "user_index") == 0 && user_index[0] == '\0'){
         // Reformat file 
         reformat(file, phone, uid, isp);
+        fprintf(file, "uuid: %s\n", uuid);
         fprintf(file, "oauth_url: %s\n", oauth_url);
         fprintf(file, "%s: %s\n", key, value);
         printf("Key '%s' appended to YAML file.\n", key);
-    } else {
-        printf("Key '%s' already exists.\n", key);
     }
 
     fclose(file);
