@@ -99,6 +99,8 @@ static char *get_uuid() {
     return uuid;
 }
 
+// TODO: Update login detection
+// Using auth system will always return not login-ed
 static int is_logged(const char *uuid){
     printf("%sChecking if it is logged%s\n", CBLUE, CRESET);
     CURL *curl;
@@ -129,8 +131,8 @@ static int is_logged(const char *uuid){
                 char *result;
                 if (cJSON_IsString(data) && (data->valuestring != NULL)) {
                     result = strdup(data->valuestring);
-                    logged = strcmp(result, "未确认登录")? 1: 0;
-                    printf("%sLogin status%s: %s\n", CBLUE, CRESET, logged? "No": "Yes");
+                    logged = strcmp(result, "未确认登录");
+                    printf("%sLogin status%s: %s\n", CBLUE, CRESET, logged? "Yes": "No");
                 } else {
                     print_json_err("No result provided by server.", chunk.response);
                     return 1;
@@ -458,7 +460,7 @@ int main(int argc, char *argv[]) {
     append_yaml_if_missing(config_path, "uuid", uuid);
 
     int logged = is_logged(uuid);
-    if (!logged) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
+    if (logged == 1) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
 
     char *token = login(uuid);
     if (token == NULL) {
