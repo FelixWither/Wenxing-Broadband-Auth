@@ -35,19 +35,18 @@ static size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
     struct memory *mem = (struct memory *)userp;
 
     char *ptr = realloc(mem->response, mem->size + realsize + 1);
-    if(ptr == NULL)
-        return 0;
+    if(ptr == NULL) {
+        // Handle memory allocation failure
+        fprintf(stderr, "Not enough memory to allocate buffer\n");
+        return 0; // Indicate error to curl
+    }
 
     mem->response = ptr;
     memcpy(&(mem->response[mem->size]), data, realsize);
     mem->size += realsize;
-    mem->response[mem->size] = 0;
+    mem->response[mem->size] = 0; // Null-terminate the string
 
     return realsize;
-}
-
-size_t dummy_write(void *ptr, size_t size, size_t nmemb, void *userdata) {
-    return size * nmemb; // Just return the size, without doing anything
 }
 
 static char *get_uuid() {
@@ -67,6 +66,7 @@ static char *get_uuid() {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, set_common_headers());
+        set_cainfo(curl);
 
         res = curl_easy_perform(curl);
 
@@ -146,6 +146,9 @@ static int is_logged(){
         // Clean up curl after the request
         curl_easy_cleanup(curl);
     }
+    if(chunk.response) {
+        free(chunk.response);
+    }
     return logged;
 }
 
@@ -169,6 +172,7 @@ static char *login(const char *uuid) {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, set_common_headers());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+        set_cainfo(curl);
 
         res = curl_easy_perform(curl);
 
@@ -229,6 +233,7 @@ static char *oauth(const char *token, const char *redirect_start_uri, const char
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+        set_cainfo(curl);
 
         res = curl_easy_perform(curl);
 
@@ -290,6 +295,7 @@ static void final_step(const char *login_key, const char *isp_name, const char *
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, set_common_headers());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+        set_cainfo(curl);
         // Allow curl to follow redirects
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         // Assign header search function to curl
@@ -352,6 +358,7 @@ static int logout(const char *user_index){
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, set_common_headers());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+        set_cainfo(curl);
 
         res = curl_easy_perform(curl);
 

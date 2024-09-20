@@ -24,6 +24,7 @@ void print_json_err(const char *error_message, const char *response);
 char *parse_yaml(const char *filename, const char *key_to_find);
 int append_yaml_if_missing(const char *filename, const char *key, const char *value);
 void reformat(FILE *file, const char *phone, const char *uid, const char *isp);
+void set_cainfo(CURL *curl);
 char *get_executable_dir();
 size_t header_search(void *data, size_t size, size_t nmemb, void *userp);
 

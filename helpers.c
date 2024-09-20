@@ -11,6 +11,12 @@ struct curl_slist *set_common_headers() {
     return headers;
 }
 
+void set_cainfo (CURL *curl) {
+    #if defined(__linux__)
+            curl_easy_setopt(curl, CURLOPT_CAINFO, "/etc/ssl/certs/ca-certificates.crt");
+    #endif
+}
+
 void print_json_err(const char *error_message, const char *response) {
     fprintf(stderr, "%s%s%s\n", CRED, error_message, CRESET);
     printf("%sServer's response%s: %s\n", CBLUE, CRESET, response);
