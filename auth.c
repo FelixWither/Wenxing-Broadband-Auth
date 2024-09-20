@@ -46,6 +46,10 @@ static size_t write_callback(void *data, size_t size, size_t nmemb, void *userp)
     return realsize;
 }
 
+size_t dummy_write(void *ptr, size_t size, size_t nmemb, void *userdata) {
+    return size * nmemb; // Just return the size, without doing anything
+}
+
 static char *get_uuid() {
     printf("%sGetting uuid.%s\n", CBLUE, CRESET);
     CURL *curl;
@@ -99,10 +103,8 @@ static char *get_uuid() {
     return uuid;
 }
 
-// TODO: Update login detection
-// Using auth system will always return not login-ed
-static int is_logged(const char *uuid){
-    printf("%sChecking if it is logged%s\n", CBLUE, CRESET);
+static int is_logged(){
+    printf("%sChecking if network is reacheable.%s\n", CBLUE, CRESET);
     CURL *curl;
     CURLcode res;
     struct memory chunk = {0};
@@ -111,43 +113,38 @@ static int is_logged(const char *uuid){
     curl = curl_easy_init();
 
     if(curl){
-        char url[512];
-        char payload[512];
-        snprintf(url, sizeof(url), "%s%s", BASE_URL, LOGIN_DETECT);
-        snprintf(payload, sizeof(payload), "{\"clientId\":\"%s\",\"type\":\"pc\",\"uuid\":\"%s\"}", CLIENT_ID, uuid);
+        // Set the URL for the server you want to "ping"
+        curl_easy_setopt(curl, CURLOPT_URL, "http://www.baidu.com");
 
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, set_common_headers());
+        // Set a connection timeout (in seconds)
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);  // Timeout for the entire operation
+
+        // Set a maximum time for the entire operation (in seconds)
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);  // Timeout for connection phase
+
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
 
+        char *res_not_logged = "<script>top.self.location.href='http://10.10.16.101:8080/eportal/index.jsp?";
+
+        // Perform the request, and get a return code
         res = curl_easy_perform(curl);
 
-        if(res == CURLE_OK) {
-            cJSON *json = cJSON_Parse(chunk.response);
-            if (json != NULL) {
-                cJSON *data = cJSON_GetObjectItemCaseSensitive(json, "message");
-                char *result;
-                if (cJSON_IsString(data) && (data->valuestring != NULL)) {
-                    result = strdup(data->valuestring);
-                    logged = strcmp(result, "未确认登录");
-                    printf("%sLogin status%s: %s\n", CBLUE, CRESET, logged? "Yes": "No");
-                } else {
-                    print_json_err("No result provided by server.", chunk.response);
-                    return 1;
-                }
-                cJSON_Delete(json);
-            } else {
-                print_json_err("No valid JSON response for oauth request.", chunk.response);
-            }
-        } else {
-            fprintf(stderr, "%sGet login status failed%s: %s\n", CRED, CRESET, curl_easy_strerror(res));
+        // Check if the request was successful
+        if(res != CURLE_OK) {
+            fprintf(stderr, "%sPing failed%s: %s\n", CRED, CRESET, curl_easy_strerror(res));
+            curl_easy_cleanup(curl);
+            return logged;
+        } else if (strstr(chunk.response, res_not_logged)){
+            printf("%sNot login, logging in.%s\n", CBLUE, CRESET);
+            curl_easy_cleanup(curl);
+            return logged;
         }
+        printf("%sPing successful! Network reachable.%s\n", CBLUE, CRESET);
+        logged = 0;
+
+        // Clean up curl after the request
         curl_easy_cleanup(curl);
-    }
-    if (chunk.response) {
-        free(chunk.response);
     }
     return logged;
 }
@@ -165,7 +162,7 @@ static char *login(const char *uuid) {
         char url[512];
         char payload[512];
         snprintf(url, sizeof(url), "%s%s", BASE_URL, LOGIN_PATH);
-        snprintf(payload, sizeof(payload), "{\"phone\":\"%s\",\"uid\":\"%s\",\"captchaKey\":\"%s\"}", phone, uid, uuid);
+        snprintf(payload, sizeof(payload), "{\"phone\":\"%s\",\"uid\":\"%s\",\"captchaKey\":\"\"}", phone, uid);
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
@@ -314,7 +311,7 @@ static void final_step(const char *login_key, const char *isp_name, const char *
                             char *end = strchr(user_index, '&');
                             if (end) *end = '\0';
                             printf("%sUser index obtained%s: %s\n", CBLUE, CRESET, user_index);
-                            printf("%sSuccess%s", CBLUE, CRESET);
+                            printf("%sSuccess%s\n", CBLUE, CRESET);
                             append_yaml_if_missing(file_name, "user_index", user_index);
                         } else {
                             print_json_err("No user index provided by server.", chunk.response);
@@ -450,6 +447,9 @@ int main(int argc, char *argv[]) {
     // user_index = parse_yaml(config_path, "user_index");
     // if (user_index[0] == '\0') { printf("No user index found."); return 1; }
 
+    int logged = is_logged();
+    if (logged == 0) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
+
     char *uuid = get_uuid();
     if (uuid == NULL) {
         printf("Failed to get uuid, check details above.");
@@ -458,9 +458,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     append_yaml_if_missing(config_path, "uuid", uuid);
-
-    int logged = is_logged(uuid);
-    if (logged == 1) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
 
     char *token = login(uuid);
     if (token == NULL) {
