@@ -27,5 +27,6 @@ void reformat(FILE *file, const char *phone, const char *uid, const char *isp);
 void set_cainfo(CURL *curl);
 char *get_executable_dir();
 size_t header_search(void *data, size_t size, size_t nmemb, void *userp);
+void replace_substring(char *str, const char *target, const char *replacement);
 
 #endif // HELPERS_H

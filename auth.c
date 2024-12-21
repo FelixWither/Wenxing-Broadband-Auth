@@ -429,6 +429,9 @@ int main(int argc, char *argv[]) {
             exit(res);
         }
     }
+
+    int logged = is_logged();
+    if (logged == 0) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); curl_global_cleanup(); exit(0);}
     
     if (config_path[0] == '\0') {
         char *exec_dir = get_executable_dir();
@@ -451,11 +454,9 @@ int main(int argc, char *argv[]) {
     if (isp[0] == '\0') { printf("No ISP specified."); return 1; }
     oauth_url = parse_yaml(config_path, "oauth_url");
     if (oauth_url[0] == '\0') { printf("No oauth url found."); return 1; }
+    replace_substring(oauth_url, "%3F", "?");
     // user_index = parse_yaml(config_path, "user_index");
     // if (user_index[0] == '\0') { printf("No user index found."); return 1; }
-
-    int logged = is_logged();
-    if (logged == 0) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
 
     char *uuid = get_uuid();
     if (uuid == NULL) {

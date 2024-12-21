@@ -173,6 +173,31 @@ void reformat(FILE *file, const char *phone, const char *uid, const char *isp){
     fprintf(file, "isp: %s\n", isp);
 }
 
+void replace_substring(char *str, const char *target, const char *replacement) {
+    char buffer[2048]; // Temporary buffer, ensure it's large enough
+    char *insert_point = buffer;
+    char *occurence = str;
+    size_t target_len = strlen(target);
+    size_t replacement_len = strlen(replacement);
+
+
+    while ((occurence = strstr(occurence, target)) != NULL){
+        size_t len = occurence - str;
+        memcpy(insert_point, str, len);
+        insert_point += len;
+        memcpy(insert_point, replacement, replacement_len + 1);
+        insert_point += replacement_len;
+
+        char *end_ptr = str + strlen(str);
+        len = end_ptr - occurence; // Calculate the number of bytes to copy
+        occurence += target_len;
+        memcpy(insert_point, occurence, len); // Copy the correct number of bytes
+
+        // printf("%s", buffer);
+        strcpy(str, buffer);
+    }
+}
+
 int append_yaml_if_missing(const char *filename, const char *key, const char *value) {
     char *phone;
     char *uid;
