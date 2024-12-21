@@ -318,7 +318,7 @@ static void final_step(const char *login_key, const char *isp_name, const char *
                             if (end) *end = '\0';
                             printf("%sUser index obtained%s: %s\n", CBLUE, CRESET, user_index);
                             printf("%sSuccess%s\n", CBLUE, CRESET);
-                            append_yaml_if_missing(file_name, "user_index", user_index);
+                            // append_yaml_if_missing(file_name, "user_index", user_index);
                         } else {
                             print_json_err("No user index provided by server.", chunk.response);
                         }

@@ -204,7 +204,7 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
     char *isp;
     char *uuid;
     char *oauth_url;
-    char *user_index;
+    // char *user_index;
 
     // Parse the YAML file and fill the corresponding variables
     phone = parse_yaml(filename, "phone");
@@ -212,7 +212,7 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
     isp = parse_yaml(filename, "isp");
     uuid = parse_yaml(filename, "uuid");
     oauth_url = parse_yaml(filename, "oauth_url");
-    user_index = parse_yaml(filename, "user_index");
+    // user_index = parse_yaml(filename, "user_index");
 
     FILE *file = fopen(filename, "r+");
     if (!file) {
@@ -225,7 +225,7 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
         reformat(file, phone, uid, isp);
         fprintf(file, "%s: %s\n", key, value);
         fprintf(file, "oauth_url: %s\n", oauth_url);
-        fprintf(file, "user_index: %s\n", user_index);
+        // fprintf(file, "user_index: %s\n", user_index);
         printf("Key '%s' appended to YAML file.\n", key);
     }
 
@@ -234,14 +234,14 @@ int append_yaml_if_missing(const char *filename, const char *key, const char *va
         // Still not figured out how to automatically obtain.
     }
 
-    if (strcmp(key, "user_index") == 0 && user_index[0] == '\0'){
-        // Reformat file 
-        reformat(file, phone, uid, isp);
-        fprintf(file, "uuid: %s\n", uuid);
-        fprintf(file, "oauth_url: %s\n", oauth_url);
-        fprintf(file, "%s: %s\n", key, value);
-        printf("Key '%s' appended to YAML file.\n", key);
-    }
+    // if (strcmp(key, "user_index") == 0 && user_index[0] == '\0'){
+    //     // Reformat file 
+    //     reformat(file, phone, uid, isp);
+    //     fprintf(file, "uuid: %s\n", uuid);
+    //     fprintf(file, "oauth_url: %s\n", oauth_url);
+    //     fprintf(file, "%s: %s\n", key, value);
+    //     printf("Key '%s' appended to YAML file.\n", key);
+    // }
 
     fclose(file);
 
