@@ -417,9 +417,10 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Unknown option: %s\n", argv[i]);
                     break;
             }
-        } else {
-            fprintf(stderr, "Unexpected argument: %s\n", argv[i]);
-        }
+        } 
+        // else {
+        //     fprintf(stderr, "Unexpected argument: %s\n", argv[i]);
+        // }
 
         // Case handling for command
         if (strcmp(argv[i], "logout") == 0){
