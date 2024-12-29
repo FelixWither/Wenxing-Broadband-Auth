@@ -432,7 +432,7 @@ int main(int argc, char *argv[]) {
     }
 
     int logged = is_logged();
-    if (logged == 0) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); curl_global_cleanup(); exit(0);}
+    if (logged == 0) {printf("%sAlready login-ed%s\n", CBLUE, CRESET); exit(0);}
     
     if (config_path[0] == '\0') {
         char *exec_dir = get_executable_dir();
