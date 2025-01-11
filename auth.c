@@ -28,7 +28,7 @@ char *uid;
 char *isp;
 char *oauth_url;
 char *final_url = NULL;
-char *user_index;
+char *user_index = NULL;
 
 static size_t write_callback(void *data, size_t size, size_t nmemb, void *userp) {
     size_t realsize = size * nmemb;
@@ -351,7 +351,7 @@ static int logout(const char *user_index){
         char url[256];
         char payload [512];
         snprintf(url, sizeof(url), "%s%s", BASE_POSTLOGIN_URL, LOGOUT_PATH);
-        snprintf(payload, sizeof(payload), "{\"userIndex\":\"%s\"}", user_index);
+        snprintf(payload, sizeof(payload), "{\"userIndex\":\"%s\"}", user_index ? user_index : "noVal");
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload);
@@ -397,7 +397,6 @@ static void free_vars(){
     free(uid);
     free(isp);
     free(oauth_url);
-    free(user_index);
 }
 
 int main(int argc, char *argv[]) {
@@ -491,6 +490,7 @@ int main(int argc, char *argv[]) {
     free(code);
     free(uuid);
     free(token);
+    free(user_index);
     free_vars();
     curl_global_cleanup();
     return 0;
